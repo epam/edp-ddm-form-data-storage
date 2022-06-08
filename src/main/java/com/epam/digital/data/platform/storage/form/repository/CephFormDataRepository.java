@@ -57,6 +57,11 @@ public class CephFormDataRepository extends BaseCephRepository implements FormDa
     execute(() -> cephService.delete(cephBucketName, keys));
   }
 
+  @Override
+  public Set<String> keys() {
+    return cephService.getKeys(cephBucketName);
+  }
+
   private FormDataDto deserializeFormData(String formData) {
     try {
       return objectMapper.readValue(formData, FormDataDto.class);

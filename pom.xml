@@ -6,7 +6,7 @@
 
   <groupId>com.epam.digital.data.platform</groupId>
   <artifactId>ddm-form-data-storage</artifactId>
-  <version>1.7.0</version>
+  <version>1.8.0</version>
 
   <name>ddm-form-data-storage</name>
 
@@ -15,17 +15,21 @@
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
-    <ddm-ceph-client.version>1.6.0.1</ddm-ceph-client.version>
+    <ddm-ceph-client.version>1.6.0.5</ddm-ceph-client.version>
     <lombok.version>1.18.22</lombok.version>
     <mockito.version>4.1.0</mockito.version>
     <assertj.version>3.21.0</assertj.version>
     <junit5.version>5.8.1</junit5.version>
+    <spring-data-redis.version>2.7.0</spring-data-redis.version>
+    <lettuce.version>6.1.8.RELEASE</lettuce.version>
+    <guava.version>31.1-jre</guava.version>
 
     <sonar.coverage.exclusions>
       **/dto/**/*,
       **/config/**/*,
       **/exception/**/*,
-      **/factory/**/*
+      **/factory/**/*,
+      **/model/**/*
     </sonar.coverage.exclusions>
   </properties>
 
@@ -58,6 +62,21 @@
       <artifactId>assertj-core</artifactId>
       <version>${assertj.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-redis</artifactId>
+      <version>${spring-data-redis.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.lettuce</groupId>
+      <artifactId>lettuce-core</artifactId>
+      <version>${lettuce.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
     </dependency>
   </dependencies>
 

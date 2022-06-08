@@ -19,11 +19,11 @@ package com.epam.digital.data.platform.storage.form.service;
 
 public class FormDataKeyProviderImpl implements FormDataKeyProvider {
 
-  private static final String TASK_FORM_DATA_KEY_FORMAT = "process/%s/task/%s";
-  private static final String START_FORM_DATA_KEY_FORMAT = "process-definition/%s/start-form/%s";
-  private static final String START_FORM_DATA_STRING_FORMAT = "start_form_%s";
-  private static final String START_FORM_DATA_VALUE_FORMAT = "lowcode_%s_%s";
-  private static final String TASK_FORM_DATA_PREFIX_FORMAT = "process/%s/";
+  public static final String TASK_FORM_DATA_KEY_FORMAT = "process/%s/task/%s";
+  public static final String START_FORM_DATA_KEY_FORMAT = "process-definition/%s/start-form/%s";
+  public static final String START_FORM_DATA_STRING_FORMAT = "start_form_%s";
+  public static final String START_FORM_DATA_VALUE_FORMAT = "lowcode_%s_%s";
+  public static final String TASK_FORM_DATA_PREFIX_FORMAT = "process/%s/";
   public static final String SYSTEM_SIGNATURE_STORAGE_KEY = "lowcode_%s_%s_system_signature_ceph_key";
   public static final String BATCH_SYSTEM_SIGNATURE_STORAGE_KEY = "lowcode_%s_system_signature_ceph_key_%s";
   public static final String SYSTEM_SIGNATURE_STORAGE_KEY_PREFIX = "lowcode_%s";

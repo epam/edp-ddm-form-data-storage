@@ -33,8 +33,7 @@ public interface FormDataRepository {
    *
    * @param key document id
    * @return {@link FormDataDto} content representation (optional)
-   * @throws IllegalArgumentException            if stored content couldn't be parsed to {@link
-   *                                             FormDataDto}
+   * @throws IllegalArgumentException if stored content couldn't be parsed to {@link FormDataDto}
    */
   @NewSpan
   Optional<FormDataDto> getFormData(String key);
@@ -64,4 +63,12 @@ public interface FormDataRepository {
    */
   @NewSpan("deleteFormDataByKeys")
   void delete(Set<String> keys);
+
+  /**
+   * Get all keys from storage
+   *
+   * @return set of keys
+   */
+  @NewSpan("getAllKeys")
+  Set<String> keys();
 }

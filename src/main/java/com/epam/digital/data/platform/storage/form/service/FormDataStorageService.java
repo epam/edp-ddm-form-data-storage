@@ -22,6 +22,7 @@ import com.epam.digital.data.platform.storage.form.dto.FormDataWrapperDto;
 import com.epam.digital.data.platform.storage.form.repository.FormDataRepository;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 
@@ -83,9 +84,7 @@ public class FormDataStorageService {
    */
   public Optional<FormDataDto> getFormData(String key) {
     log.info("Get form data by key {}", key);
-    var result = repository.getFormData(key);
-    log.info("Form data was found by key {}", key);
-    return result;
+    return repository.getFormData(key);
   }
 
   /**
@@ -181,5 +180,28 @@ public class FormDataStorageService {
       log.debug("Deleted next system signatures from storage - {}, processInstanceId={}", keys,
           processInstanceId);
     }
+  }
+
+  /**
+   * Get forms data keys
+   *
+   * @return set of keys
+   */
+  public Set<String> keys() {
+    log.info("Getting all keys from storage");
+    var result = repository.keys();
+    log.info("Found {} keys", result.size());
+    return result;
+  }
+
+  /**
+   * Delete data from storage by keys
+   *
+   * @param keys specified keys
+   */
+  public void delete(Set<String> keys) {
+    log.info("Deleting data by keys {}", keys);
+    repository.delete(keys);
+    log.info("Deleting is finished");
   }
 }

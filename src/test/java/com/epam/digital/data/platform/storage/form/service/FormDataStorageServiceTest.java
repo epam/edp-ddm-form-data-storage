@@ -195,4 +195,24 @@ class FormDataStorageServiceTest {
 
     assertThrows(FormDataRepositoryMisconfigurationException.class, () -> storageService.deleteByProcessInstanceId(procInstId));
   }
+
+  @Test
+  void shouldGetKeys() {
+    var key = formDataKeyProvider.generateSystemSignatureKey("procInstId", "procInstId");
+    when(cephService.getKeys(bucketName)).thenReturn(Set.of(key));
+
+    var result = storageService.keys();
+
+    assertThat(result.size()).isNotZero();
+    assertThat(result.iterator().next()).isEqualTo(key);
+  }
+
+  @Test
+  void shouldDelete() {
+    var keys = Set.of(formDataKeyProvider.generateSystemSignatureKey("procInstId", "procInstId"));
+
+    storageService.delete(keys);
+
+    verify(cephService).delete(bucketName, keys);
+  }
 }
