@@ -1,0 +1,7 @@
+{
+  "data": {
+    "testField": "testValue"
+  },
+  "x-access-token": "token",
+  "signature": "signature"
+}
