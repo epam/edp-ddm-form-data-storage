@@ -48,5 +48,5 @@ public FormDataStorageService formDataStorageService(StorageServiceFactory facto
 
 ### License
 
-The ddm-ceph-client is Open Source software released under
+The ddm-form-data-storage is Open Source software released under
 the [Apache 2.0 license](https://www.apache.org/licenses/LICENSE-2.0).
