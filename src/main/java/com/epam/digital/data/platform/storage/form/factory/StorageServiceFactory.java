@@ -67,11 +67,24 @@ public class StorageServiceFactory {
         .build();
   }
 
-  public FormDataStorageService formDataStorageService(RedisStorageConfiguration config) {
+  public FormDataStorageService formDataStorageService(RedisConnectionFactory connectionFactory) {
     return FormDataStorageService.builder()
-        .repository(newRedisFormDataRepository(config))
+        .repository(newRedisFormDataRepository(connectionFactory))
         .keyProvider(newFormDataKeyProvider())
         .build();
+  }
+
+  public RedisConnectionFactory redisConnectionFactory(RedisStorageConfiguration configuration) {
+    var redisSentinelConfig = new RedisSentinelConfiguration();
+
+    redisSentinelConfig.setMaster(configuration.getSentinel().getMaster());
+    setSentinelNodes(redisSentinelConfig, configuration);
+    redisSentinelConfig.setUsername(configuration.getUsername());
+    redisSentinelConfig.setPassword(configuration.getPassword());
+
+    var connectionFactory = new LettuceConnectionFactory(redisSentinelConfig);
+    connectionFactory.afterPropertiesSet();
+    return connectionFactory;
   }
 
   private FormDataKeyProviderImpl newFormDataKeyProvider() {
@@ -91,8 +104,8 @@ public class StorageServiceFactory {
         config.getAccessKey(), config.getSecretKey());
   }
 
-  private FormDataRepository newRedisFormDataRepository(RedisStorageConfiguration config) {
-    var template = newRedisTemplate(config);
+  private FormDataRepository newRedisFormDataRepository(RedisConnectionFactory connectionFactory) {
+    var template = newRedisTemplate(connectionFactory);
 
     return RedisFormDataRepository.builder()
         .repository(newFormDataKeyValueRepository(template))
@@ -112,22 +125,9 @@ public class StorageServiceFactory {
     return factory.getRepository(FormDataKeyValueRepository.class);
   }
 
-  private RedisConnectionFactory redisConnectionFactory(RedisStorageConfiguration configuration) {
-    var redisSentinelConfig = new RedisSentinelConfiguration();
-
-    redisSentinelConfig.setMaster(configuration.getSentinel().getMaster());
-    setSentinelNodes(redisSentinelConfig, configuration);
-    redisSentinelConfig.setUsername(configuration.getUsername());
-    redisSentinelConfig.setPassword(configuration.getPassword());
-
-    var connectionFactory = new LettuceConnectionFactory(redisSentinelConfig);
-    connectionFactory.afterPropertiesSet();
-    return connectionFactory;
-  }
-
-  private RedisTemplate<String, Object> newRedisTemplate(RedisStorageConfiguration configuration) {
+  private RedisTemplate<String, Object> newRedisTemplate(RedisConnectionFactory connectionFactory) {
     RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-    redisTemplate.setConnectionFactory(redisConnectionFactory(configuration));
+    redisTemplate.setConnectionFactory(connectionFactory);
     redisTemplate.setKeySerializer(new StringRedisSerializer());
     redisTemplate.afterPropertiesSet();
     return redisTemplate;
