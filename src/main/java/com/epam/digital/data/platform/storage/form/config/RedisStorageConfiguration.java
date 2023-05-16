@@ -28,5 +28,6 @@ public class RedisStorageConfiguration {
 
   private String password;
   private String username;
+  private long scanCount;
   private SentinelConfiguration sentinel;
 }

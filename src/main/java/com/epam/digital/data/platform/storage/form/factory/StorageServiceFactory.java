@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 EPAM Systems.
+ * Copyright 2023 EPAM Systems.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import com.epam.digital.data.platform.storage.form.service.FormDataStorageServic
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import io.lettuce.core.internal.HostAndPort;
-import java.util.stream.Collectors;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisSentinelConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -41,6 +40,8 @@ import org.springframework.data.redis.core.mapping.RedisMappingContext;
 import org.springframework.data.redis.repository.support.RedisRepositoryFactory;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
+
+import java.util.stream.Collectors;
 
 /**
  * The class for creation storage services based on supported configuration
@@ -59,7 +60,6 @@ public class StorageServiceFactory {
     this.objectMapper = objectMapper;
     this.cephFactory = cephFactory;
   }
-
   public FormDataStorageService formDataStorageService(CephStorageConfiguration config) {
     return FormDataStorageService.builder()
         .repository(newCephFormDataRepository(config))
@@ -67,12 +67,22 @@ public class StorageServiceFactory {
         .build();
   }
 
+  @Deprecated
   public FormDataStorageService formDataStorageService(RedisConnectionFactory connectionFactory) {
     return FormDataStorageService.builder()
         .repository(newRedisFormDataRepository(connectionFactory))
         .keyProvider(newFormDataKeyProvider())
         .build();
   }
+
+  public FormDataStorageService formDataStorageService(RedisConnectionFactory connectionFactory,
+                                                       RedisStorageConfiguration config) {
+    return FormDataStorageService.builder()
+        .repository(newRedisFormDataRepository(connectionFactory, config))
+        .keyProvider(newFormDataKeyProvider())
+        .build();
+  }
+
 
   public RedisConnectionFactory redisConnectionFactory(RedisStorageConfiguration configuration) {
     var redisSentinelConfig = new RedisSentinelConfiguration();
@@ -104,6 +114,7 @@ public class StorageServiceFactory {
         config.getAccessKey(), config.getSecretKey());
   }
 
+  @Deprecated
   private FormDataRepository newRedisFormDataRepository(RedisConnectionFactory connectionFactory) {
     var template = newRedisTemplate(connectionFactory);
 
@@ -111,6 +122,17 @@ public class StorageServiceFactory {
         .repository(newFormDataKeyValueRepository(template))
         .template(template)
         .objectMapper(objectMapper)
+        .build();
+  }
+
+  private FormDataRepository newRedisFormDataRepository(RedisConnectionFactory connectionFactory, RedisStorageConfiguration config) {
+    var template = newRedisTemplate(connectionFactory);
+
+    return RedisFormDataRepository.builder()
+        .repository(newFormDataKeyValueRepository(template))
+        .template(template)
+        .objectMapper(objectMapper)
+        .count(config.getScanCount())
         .build();
   }
 

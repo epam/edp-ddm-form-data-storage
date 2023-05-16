@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 EPAM Systems.
+ * Copyright 2023 EPAM Systems.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@ import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
 import com.epam.digital.data.platform.storage.form.model.FormDataRedis;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Builder;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Builder
 public class RedisFormDataRepository extends BaseRedisRepository implements FormDataRepository {
@@ -39,10 +39,30 @@ public class RedisFormDataRepository extends BaseRedisRepository implements Form
   private FormDataKeyValueRepository repository;
   private RedisTemplate<String, Object> template;
   private final ObjectMapper objectMapper;
+  @Builder.Default
+  private long count = 100;
 
   @Override
   public Set<String> getKeys(String pattern) {
-    return execute(() -> template.keys(String.format("%s:%s*", KEY_PREFIX, pattern)));
+    return execute(() -> getKeysWithPrefix(pattern));
+  }
+
+  private Set<String> getKeysWithPrefix(String prefix) {
+    var keys = new HashSet<String>();
+    var options = ScanOptions.scanOptions()
+        .match(String.format("%s:%s*", KEY_PREFIX, prefix))
+        .count(count)
+        .build();
+    try (
+        var con = template.getConnectionFactory().getConnection();
+        var cursor = con.scan(options)
+    ) {
+      while (cursor.hasNext()) {
+        byte[] key = cursor.next();
+        keys.add(new String(key, StandardCharsets.UTF_8));
+      }
+    }
+    return keys;
   }
 
   @Override
