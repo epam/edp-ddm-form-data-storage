@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 EPAM Systems.
+ * Copyright 2024 EPAM Systems.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,13 @@
  *
  */
 
-package com.epam.digital.data.platform.storage.form.config;
+package com.epam.digital.data.platform.storage.form.model;
 
+import lombok.Builder;
 import lombok.Data;
 
-/**
- * The configuration class that represents required properties for storage services based on redis
- * repository
- */
 @Data
-public class RedisStorageConfiguration {
-
-  private String password;
-  private String username;
-  private SentinelConfiguration sentinel;
+@Builder
+public class CephKeysSearchParams {
+  private String prefix;
 }

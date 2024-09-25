@@ -21,12 +21,16 @@ import com.epam.digital.data.platform.integration.ceph.factory.CephS3Factory;
 import com.epam.digital.data.platform.integration.ceph.service.CephService;
 import com.epam.digital.data.platform.storage.form.config.CephStorageConfiguration;
 import com.epam.digital.data.platform.storage.form.config.RedisStorageConfiguration;
+import com.epam.digital.data.platform.storage.form.model.CephKeysSearchParams;
+import com.epam.digital.data.platform.storage.form.model.RedisKeysSearchParams;
 import com.epam.digital.data.platform.storage.form.repository.CephFormDataRepository;
 import com.epam.digital.data.platform.storage.form.repository.FormDataKeyValueRepository;
 import com.epam.digital.data.platform.storage.form.repository.FormDataRepository;
 import com.epam.digital.data.platform.storage.form.repository.RedisFormDataRepository;
+import com.epam.digital.data.platform.storage.form.service.CephFormDataStorageService;
 import com.epam.digital.data.platform.storage.form.service.FormDataKeyProviderImpl;
 import com.epam.digital.data.platform.storage.form.service.FormDataStorageService;
+import com.epam.digital.data.platform.storage.form.service.RedisFormDataStorageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Splitter;
 import io.lettuce.core.internal.HostAndPort;
@@ -60,25 +64,16 @@ public class StorageServiceFactory {
     this.objectMapper = objectMapper;
     this.cephFactory = cephFactory;
   }
-  public FormDataStorageService formDataStorageService(CephStorageConfiguration config) {
-    return FormDataStorageService.builder()
+  public FormDataStorageService<CephKeysSearchParams> formDataStorageService(CephStorageConfiguration config) {
+    return CephFormDataStorageService.builder()
         .repository(newCephFormDataRepository(config))
         .keyProvider(newFormDataKeyProvider())
         .build();
   }
 
-  @Deprecated
-  public FormDataStorageService formDataStorageService(RedisConnectionFactory connectionFactory) {
-    return FormDataStorageService.builder()
+  public FormDataStorageService<RedisKeysSearchParams> formDataStorageService(RedisConnectionFactory connectionFactory) {
+    return RedisFormDataStorageService.builder()
         .repository(newRedisFormDataRepository(connectionFactory))
-        .keyProvider(newFormDataKeyProvider())
-        .build();
-  }
-
-  public FormDataStorageService formDataStorageService(RedisConnectionFactory connectionFactory,
-                                                       RedisStorageConfiguration config) {
-    return FormDataStorageService.builder()
-        .repository(newRedisFormDataRepository(connectionFactory, config))
         .keyProvider(newFormDataKeyProvider())
         .build();
   }
@@ -101,7 +96,7 @@ public class StorageServiceFactory {
     return new FormDataKeyProviderImpl();
   }
 
-  private FormDataRepository newCephFormDataRepository(CephStorageConfiguration config) {
+  private FormDataRepository<CephKeysSearchParams> newCephFormDataRepository(CephStorageConfiguration config) {
     return CephFormDataRepository.builder()
         .cephBucketName(config.getBucket())
         .cephService(newCephServiceS3(config))
@@ -114,25 +109,13 @@ public class StorageServiceFactory {
         config.getAccessKey(), config.getSecretKey());
   }
 
-  @Deprecated
-  private FormDataRepository newRedisFormDataRepository(RedisConnectionFactory connectionFactory) {
+  private FormDataRepository<RedisKeysSearchParams> newRedisFormDataRepository(RedisConnectionFactory connectionFactory) {
     var template = newRedisTemplate(connectionFactory);
 
     return RedisFormDataRepository.builder()
         .repository(newFormDataKeyValueRepository(template))
         .template(template)
         .objectMapper(objectMapper)
-        .build();
-  }
-
-  private FormDataRepository newRedisFormDataRepository(RedisConnectionFactory connectionFactory, RedisStorageConfiguration config) {
-    var template = newRedisTemplate(connectionFactory);
-
-    return RedisFormDataRepository.builder()
-        .repository(newFormDataKeyValueRepository(template))
-        .template(template)
-        .objectMapper(objectMapper)
-        .count(config.getScanCount())
         .build();
   }
 
@@ -151,6 +134,7 @@ public class StorageServiceFactory {
     RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
     redisTemplate.setConnectionFactory(connectionFactory);
     redisTemplate.setKeySerializer(new StringRedisSerializer());
+    redisTemplate.setValueSerializer(new StringRedisSerializer());
     redisTemplate.afterPropertiesSet();
     return redisTemplate;
   }

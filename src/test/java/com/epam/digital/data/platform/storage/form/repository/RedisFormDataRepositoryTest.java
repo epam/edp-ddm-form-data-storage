@@ -23,8 +23,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
+import com.epam.digital.data.platform.storage.form.dto.FormDataInputWrapperDto;
 import com.epam.digital.data.platform.storage.form.exception.FormDataRepositoryCommunicationException;
 import com.epam.digital.data.platform.storage.form.model.FormDataRedis;
+import com.epam.digital.data.platform.storage.form.model.RedisKeysSearchParams;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -44,7 +46,7 @@ class RedisFormDataRepositoryTest {
   private FormDataKeyValueRepository repository;
   @Mock
   private RedisTemplate<String, Object> template;
-  private FormDataRepository formDataRepository;
+  private FormDataRepository<RedisKeysSearchParams> formDataRepository;
 
   @BeforeEach
   void init() {
@@ -79,11 +81,15 @@ class RedisFormDataRepositoryTest {
     var formDataDto = FormDataDto.builder()
         .data(new LinkedHashMap<>(Map.of("testField", "testValue")))
         .build();
+    var formDataInputWrapperDto = FormDataInputWrapperDto.builder()
+          .key(key)
+          .formData(formDataDto)
+          .build();
     var formData = FormDataRedis.builder()
         .data("{\"testField\":\"testValue\"}")
         .id(key).build();
 
-    formDataRepository.putFormData(key, formDataDto);
+    formDataRepository.putFormData(formDataInputWrapperDto);
     verify(repository).save(formData);
   }
 

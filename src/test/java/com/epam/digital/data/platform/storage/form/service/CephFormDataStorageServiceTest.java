@@ -44,13 +44,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class FormDataStorageServiceTest {
+class CephFormDataStorageServiceTest {
 
   private final String bucketName = "bucket";
 
   @Mock
   private CephService cephService;
-  private FormDataStorageService storageService;
+  private FormDataStorageService<?> storageService;
   private FormDataKeyProvider formDataKeyProvider;
 
   @BeforeEach
@@ -61,7 +61,7 @@ class FormDataStorageServiceTest {
         .cephService(cephService)
         .build();
     formDataKeyProvider = new FormDataKeyProviderImpl();
-    storageService = FormDataStorageService.builder()
+    storageService = CephFormDataStorageService.builder()
         .keyProvider(formDataKeyProvider)
         .repository(repository)
         .build();
@@ -74,7 +74,7 @@ class FormDataStorageServiceTest {
     var processInstanceId = "piid";
     var key = formDataKeyProvider.generateKey(taskDefKey, processInstanceId);
     var formDataAsStr = new String(Objects.requireNonNull(
-            FormDataStorageServiceTest.class.getResourceAsStream("/json/testFormData.json"))
+            CephFormDataStorageServiceTest.class.getResourceAsStream("/json/testFormData.json"))
         .readAllBytes());
 
     when(cephService.getAsString(bucketName, key)).thenReturn(Optional.of(formDataAsStr));
@@ -131,27 +131,17 @@ class FormDataStorageServiceTest {
   @Test
   void testDeleteByProcInstId() {
     var procInstId = "id";
-    var prefix = formDataKeyProvider.getKeyPrefixByProcessInstanceId(procInstId);
-    var key = formDataKeyProvider.generateKey(procInstId, "taskDefId");
+    var formDataPrefix = formDataKeyProvider.getKeyPrefixByProcessInstanceId(procInstId);
+    var formDataKey = formDataKeyProvider.generateKey(procInstId, "taskDefId");
+    var systemSignPrefix = formDataKeyProvider.getSystemSignatureKeyPrefix(procInstId);
+    var systemSignKey = formDataKeyProvider.generateSystemSignatureKey(procInstId, procInstId);
 
-    when(cephService.getKeys(bucketName, prefix)).thenReturn(Set.of(key));
+    when(cephService.getKeys(bucketName, formDataPrefix)).thenReturn(Set.of(formDataKey));
+    when(cephService.getKeys(bucketName, systemSignPrefix)).thenReturn(Set.of(systemSignKey));
 
-    storageService.deleteByProcessInstanceId(procInstId);
+    storageService.deleteByProcessInstance(procInstId);
 
-    verify(cephService).delete(bucketName, Set.of(key));
-  }
-
-  @Test
-  void shouldDeleteSystemSignatures() {
-    var procInstId = "id";
-    var prefix = formDataKeyProvider.getSystemSignatureKeyPrefix(procInstId);
-    var key = formDataKeyProvider.generateSystemSignatureKey(procInstId, procInstId);
-
-    when(cephService.getKeys(bucketName, prefix)).thenReturn(Set.of(key));
-
-    storageService.deleteSystemSignaturesByRootProcessInstanceId(procInstId);
-
-    verify(cephService).delete(bucketName, Set.of(key));
+    verify(cephService).delete(bucketName, Set.of(formDataKey, systemSignKey));
   }
 
   @Test
@@ -161,7 +151,7 @@ class FormDataStorageServiceTest {
     var procInstId = "id";
     var key = formDataKeyProvider.generateKey(taskDefKey, procInstId);
     var formDataAsStr = new String(Objects.requireNonNull(
-            FormDataStorageServiceTest.class.getResourceAsStream("/json/testFormData.json"))
+            CephFormDataStorageServiceTest.class.getResourceAsStream("/json/testFormData.json"))
         .readAllBytes());
 
     when(cephService.getAsString(bucketName, key)).thenReturn(Optional.of(formDataAsStr));
@@ -183,7 +173,9 @@ class FormDataStorageServiceTest {
 
     when(cephService.getKeys(bucketName, prefix)).thenThrow(CephCommunicationException.class);
 
-    assertThrows(FormDataRepositoryCommunicationException.class, () -> storageService.deleteByProcessInstanceId(procInstId));
+    assertThrows(
+        FormDataRepositoryCommunicationException.class,
+        () -> storageService.deleteByProcessInstance(procInstId));
   }
 
   @Test
@@ -193,18 +185,9 @@ class FormDataStorageServiceTest {
 
     when(cephService.getKeys(bucketName, prefix)).thenThrow(MisconfigurationException.class);
 
-    assertThrows(FormDataRepositoryMisconfigurationException.class, () -> storageService.deleteByProcessInstanceId(procInstId));
-  }
-
-  @Test
-  void shouldGetKeys() {
-    var key = formDataKeyProvider.generateSystemSignatureKey("procInstId", "procInstId");
-    when(cephService.getKeys(bucketName)).thenReturn(Set.of(key));
-
-    var result = storageService.keys();
-
-    assertThat(result.size()).isNotZero();
-    assertThat(result.iterator().next()).isEqualTo(key);
+    assertThrows(
+        FormDataRepositoryMisconfigurationException.class,
+        () -> storageService.deleteByProcessInstance(procInstId));
   }
 
   @Test

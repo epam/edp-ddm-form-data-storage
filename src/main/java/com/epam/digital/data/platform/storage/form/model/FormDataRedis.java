@@ -17,13 +17,14 @@
 
 package com.epam.digital.data.platform.storage.form.model;
 
+import com.epam.digital.data.platform.storage.form.repository.RedisFormDataRepository;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.redis.core.RedisHash;
 
 @Data
 @Builder
-@RedisHash("bpm-form-submissions")
+@RedisHash(RedisFormDataRepository.KEY_PREFIX)
 public class FormDataRedis {
 
   private String id;

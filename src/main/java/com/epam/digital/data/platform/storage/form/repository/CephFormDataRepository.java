@@ -19,6 +19,8 @@ package com.epam.digital.data.platform.storage.form.repository;
 
 import com.epam.digital.data.platform.integration.ceph.service.CephService;
 import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
+import com.epam.digital.data.platform.storage.form.dto.FormDataInputWrapperDto;
+import com.epam.digital.data.platform.storage.form.model.CephKeysSearchParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
@@ -30,7 +32,7 @@ import java.util.Set;
 
 @Slf4j
 @Builder
-public class CephFormDataRepository extends BaseCephRepository implements FormDataRepository {
+public class CephFormDataRepository extends BaseCephRepository implements FormDataRepository<CephKeysSearchParams> {
 
   private final String cephBucketName;
   private final CephService cephService;
@@ -43,23 +45,23 @@ public class CephFormDataRepository extends BaseCephRepository implements FormDa
   }
 
   @Override
-  public void putFormData(String key, FormDataDto content) {
-    execute(() -> cephService.put(cephBucketName, key, serializeFormData(content)));
+  public void putFormData(FormDataInputWrapperDto formDataInputWrapperDto) {
+    execute(
+        () ->
+            cephService.put(
+                cephBucketName,
+                formDataInputWrapperDto.getKey(),
+                serializeFormData(formDataInputWrapperDto.getFormData())));
   }
 
   @Override
-  public Set<String> getKeys(String prefix) {
-    return execute(() -> cephService.getKeys(cephBucketName, prefix));
+  public Set<String> getKeysBySearchParams(CephKeysSearchParams cephKeysSearchParams) {
+    return execute(() -> cephService.getKeys(cephBucketName, cephKeysSearchParams.getPrefix()));
   }
 
   @Override
   public void delete(Set<String> keys) {
     execute(() -> cephService.delete(cephBucketName, keys));
-  }
-
-  @Override
-  public Set<String> keys() {
-    return cephService.getKeys(cephBucketName);
   }
 
   private FormDataDto deserializeFormData(String formData) {

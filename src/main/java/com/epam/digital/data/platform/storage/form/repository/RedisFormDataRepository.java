@@ -19,50 +19,45 @@ package com.epam.digital.data.platform.storage.form.repository;
 
 
 import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
+import com.epam.digital.data.platform.storage.form.dto.FormDataInputWrapperDto;
 import com.epam.digital.data.platform.storage.form.model.FormDataRedis;
+import com.epam.digital.data.platform.storage.form.model.RedisKeysSearchParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ScanOptions;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Builder
-public class RedisFormDataRepository extends BaseRedisRepository implements FormDataRepository {
+public class RedisFormDataRepository extends BaseRedisRepository implements FormDataRepository<RedisKeysSearchParams> {
 
   public static final String KEY_PREFIX = "bpm-form-submissions";
+  public static final String PROCESS_INSTANCE_ID_PREFIX = "process-instance-id";
 
   private FormDataKeyValueRepository repository;
   private RedisTemplate<String, Object> template;
   private final ObjectMapper objectMapper;
-  @Builder.Default
-  private long count = 100;
 
   @Override
-  public Set<String> getKeys(String pattern) {
-    return execute(() -> getKeysWithPrefix(pattern));
+  public Set<String> getKeysBySearchParams(RedisKeysSearchParams redisKeysSearchParams) {
+    return execute(
+        () -> getKeysToDeleteByProcessInstanceId(redisKeysSearchParams.getProcessInstanceId()));
   }
 
-  private Set<String> getKeysWithPrefix(String prefix) {
-    var keys = new HashSet<String>();
-    var options = ScanOptions.scanOptions()
-        .match(String.format("%s:%s*", KEY_PREFIX, prefix))
-        .count(count)
-        .build();
-    try (
-        var con = template.getConnectionFactory().getConnection();
-        var cursor = con.scan(options)
-    ) {
-      while (cursor.hasNext()) {
-        byte[] key = cursor.next();
-        keys.add(new String(key, StandardCharsets.UTF_8));
-      }
+  private Set<String> getKeysToDeleteByProcessInstanceId(String processInstanceId) {
+    var parentKey = String.format("%s:%s:%s", KEY_PREFIX, PROCESS_INSTANCE_ID_PREFIX, processInstanceId);
+    var keysToDeleteByProcessInstanceId = Optional.ofNullable(template.opsForSet().members(parentKey))
+            .stream().flatMap(Collection::stream)
+            .map(Object::toString)
+            .collect(Collectors.toSet());
+    if (keysToDeleteByProcessInstanceId.isEmpty()) {
+      return Collections.emptySet();
     }
-    return keys;
+    keysToDeleteByProcessInstanceId.add(parentKey);
+    return keysToDeleteByProcessInstanceId;
   }
 
   @Override
@@ -74,13 +69,15 @@ public class RedisFormDataRepository extends BaseRedisRepository implements Form
   }
 
   @Override
-  public Set<String> keys() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void putFormData(String key, FormDataDto content) {
-    execute(() -> repository.save(toFormDataRedis(key, content)));
+  public void putFormData(FormDataInputWrapperDto formDataInputWrapperDto) {
+    execute(
+        () -> {
+          repository.save(
+              toFormDataRedis(
+                  formDataInputWrapperDto.getKey(), formDataInputWrapperDto.getFormData()));
+          addToProcessInstanceRelatedKeySet(
+              formDataInputWrapperDto.getProcessInstanceId(), formDataInputWrapperDto.getKey());
+        });
   }
 
   @Override
@@ -108,6 +105,18 @@ public class RedisFormDataRepository extends BaseRedisRepository implements Form
         .data(serializeData(formDataDto.getData()))
         .signature(formDataDto.getSignature())
         .build();
+  }
+
+  private void addToProcessInstanceRelatedKeySet(String processInstanceId, String key) {
+    Optional.ofNullable(processInstanceId)
+        .map(
+            procInstId ->
+                String.format("%s:%s:%s", KEY_PREFIX, PROCESS_INSTANCE_ID_PREFIX, procInstId))
+        .ifPresent(
+            processInstanceIdRelatedKeysSet ->
+                template
+                    .opsForSet()
+                    .add(processInstanceIdRelatedKeysSet, String.format("%s:%s", KEY_PREFIX, key)));
   }
 
   private LinkedHashMap<String, Object> deserializeData(String formData) {

@@ -18,23 +18,26 @@
 package com.epam.digital.data.platform.storage.form.service;
 
 import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
+import com.epam.digital.data.platform.storage.form.dto.FormDataInputWrapperDto;
 import com.epam.digital.data.platform.storage.form.dto.FormDataWrapperDto;
 import com.epam.digital.data.platform.storage.form.repository.FormDataRepository;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import lombok.Builder;
+
+import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * The service for managing form data
  */
 @Slf4j
-@Builder
-public class FormDataStorageService {
+@SuperBuilder
+public abstract class FormDataStorageService<T> {
 
-  private final FormDataRepository repository;
-  private final FormDataKeyProvider keyProvider;
+  protected final FormDataRepository<T> repository;
+  protected final FormDataKeyProvider keyProvider;
 
   /**
    * Get from data from storage by task definition key and process instance id
@@ -98,7 +101,9 @@ public class FormDataStorageService {
     log.info("Put form data by task definition key {}, process instance id {}", taskDefinitionKey,
         processInstanceId);
     var key = keyProvider.generateKey(taskDefinitionKey, processInstanceId);
-    this.putFormData(key, content);
+    var formDataInputWrapperDto = FormDataInputWrapperDto.builder().key(key).formData(content)
+        .processInstanceId(processInstanceId).build();
+    this.putFormData(formDataInputWrapperDto);
   }
 
   /**
@@ -113,7 +118,8 @@ public class FormDataStorageService {
   public String putStartFormData(String processDefinitionKey, String uuid, FormDataDto content) {
     log.info("Put start form by process definition key {}, uuid {}", processDefinitionKey, uuid);
     var key = keyProvider.generateStartFormKey(processDefinitionKey, uuid);
-    this.putFormData(key, content);
+    var formDataInputWrapperDto = FormDataInputWrapperDto.builder().key(key).formData(content).build();
+    this.putFormData(formDataInputWrapperDto);
     return key;
   }
 
@@ -131,68 +137,44 @@ public class FormDataStorageService {
     log.info("Put external system form data by process definition key {}, uuid {}",
         processDefinitionKey, uuid);
     var key = keyProvider.generateKeyForExternalSystem(processDefinitionKey, uuid);
-    this.putFormData(key, content);
+    var formDataInputWrapperDto =
+        FormDataInputWrapperDto.builder().key(key).formData(content).build();
+    this.putFormData(formDataInputWrapperDto);
     return key;
   }
 
   /**
    * Put form data to storage
    *
-   * @param key     document id
-   * @param content {@link FormDataDto} content representation
+   * @param formDataInputWrapperDto {@link FormDataInputWrapperDto}    form data to be put into a storage and metadata
    */
-  public void putFormData(String key, FormDataDto content) {
-    log.info("Put form data by key {}", key);
-    repository.putFormData(key, content);
-    log.info("Form data was put to storage by key {}", key);
+  public void putFormData(FormDataInputWrapperDto formDataInputWrapperDto) {
+    log.info("Put form data by key {}", formDataInputWrapperDto.getKey());
+    repository.putFormData(formDataInputWrapperDto);
+    log.info("Form data was put to storage by key {}", formDataInputWrapperDto.getKey());
   }
 
   /**
-   * Delete all forms attached to provided process instance id and specified additional keys
+   * Delete all forms and system signatures attached to provided process instance id and specified
+   * additional keys
    *
-   * @param processInstanceId      specified process instance id
+   * @param processInstanceId specified process instance id
    * @param additionalKeysToDelete additional keys to delete
    */
-  public void deleteByProcessInstanceId(String processInstanceId,
-      String... additionalKeysToDelete) {
-    log.info("Delete form data by process instance id {}", processInstanceId);
-    var prefix = keyProvider.getKeyPrefixByProcessInstanceId(processInstanceId);
-    var keys = repository.getKeys(prefix);
-    Collections.addAll(keys, additionalKeysToDelete);
-    if (!keys.isEmpty()) {
-      repository.delete(keys);
-      log.debug("Deleted next forms data from storage - {}, processInstanceId={}", keys,
-          processInstanceId);
+  public void deleteByProcessInstance(
+      String processInstanceId, String... additionalKeysToDelete) {
+    log.info("Delete form data and system signatures by process instance id {}", processInstanceId);
+    var keysByProcessInstanceId = findKeysByProcessInstanceId(processInstanceId);
+    var keysToDelete = new HashSet<>(keysByProcessInstanceId);
+    Collections.addAll(keysToDelete, additionalKeysToDelete);
+    if (!keysToDelete.isEmpty()) {
+      repository.delete(keysToDelete);
+      log.debug(
+          "Deleted next keys from storage - {}, processInstanceId={}", keysToDelete, processInstanceId);
     }
   }
 
-  /**
-   * Delete all system signatures associated with provided root process instance id
-   *
-   * @param processInstanceId specified root process instance id
-   */
-  public void deleteSystemSignaturesByRootProcessInstanceId(String processInstanceId) {
-    log.info("Deleting system signatures by root process instance id {}", processInstanceId);
-    var prefix = keyProvider.getSystemSignatureKeyPrefix(processInstanceId);
-    var keys = repository.getKeys(prefix);
-    if (!keys.isEmpty()) {
-      repository.delete(keys);
-      log.debug("Deleted next system signatures from storage - {}, processInstanceId={}", keys,
-          processInstanceId);
-    }
-  }
-
-  /**
-   * Get forms data keys
-   *
-   * @return set of keys
-   */
-  public Set<String> keys() {
-    log.info("Getting all keys from storage");
-    var result = repository.keys();
-    log.info("Found {} keys", result.size());
-    return result;
-  }
+  protected abstract Set<String> findKeysByProcessInstanceId(String processInstanceId);
 
   /**
    * Delete data from storage by keys

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 EPAM Systems.
+ * Copyright 2023 EPAM Systems.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@
 package com.epam.digital.data.platform.storage.form.repository;
 
 import com.epam.digital.data.platform.storage.form.dto.FormDataDto;
+import com.epam.digital.data.platform.storage.form.dto.FormDataInputWrapperDto;
 import org.springframework.cloud.sleuth.annotation.NewSpan;
 
 import java.util.Optional;
@@ -26,7 +27,7 @@ import java.util.Set;
 /**
  * The repository for getting and storing form data.
  */
-public interface FormDataRepository {
+public interface FormDataRepository<T> {
 
   /**
    * Retrieve formData by key
@@ -41,20 +42,19 @@ public interface FormDataRepository {
   /**
    * Put formData to repository
    *
-   * @param key     document id
-   * @param content {@link FormDataDto} content representation
+   * @param formDataInputWrapperDto {@link FormDataInputWrapperDto} form data and additional information, required for storing
    */
   @NewSpan
-  void putFormData(String key, FormDataDto content);
+  void putFormData(FormDataInputWrapperDto formDataInputWrapperDto);
 
   /**
-   * Get storage keys by provided prefix
+   * Get storage keys by provided search parameters
    *
-   * @param prefix specified prefix
+   * @param searchParams provided search parameters
    * @return set of keys
    */
-  @NewSpan("getKeysByPrefix")
-  Set<String> getKeys(String prefix);
+  @NewSpan("getKeysBySearchParams")
+  Set<String> getKeysBySearchParams(T searchParams);
 
   /**
    * Delete forms by provided keys
@@ -63,12 +63,4 @@ public interface FormDataRepository {
    */
   @NewSpan("deleteFormDataByKeys")
   void delete(Set<String> keys);
-
-  /**
-   * Get all keys from storage
-   *
-   * @return set of keys
-   */
-  @NewSpan("getAllKeys")
-  Set<String> keys();
 }
